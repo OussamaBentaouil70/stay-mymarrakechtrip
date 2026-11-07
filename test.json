@@ -1,0 +1,8 @@
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "phone": "+212 600 000 000",
+  "property": "Test Riad",
+  "message": "This is a local test message.",
+  "botcheck": ""
+}

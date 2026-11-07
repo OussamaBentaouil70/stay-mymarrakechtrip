@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+@theme {
+  /* ---- Typography ---- */
+  --font-sans: "Manrope", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-logo: "Cinzel", "Trajan Pro", Georgia, serif;
+
+  /* ---- Palette: neutrals + earthy bronze from the STAY logo ---- */
+  --color-white: #ffffff;
+  --color-ivory: #f8f5f0; /* page background */
+  --color-sand: #efe7dc; /* beige bands */
+  --color-stone: #ddd2c3; /* hairlines, borders */
+  --color-taupe: #a8998a;
+  --color-muted: #6b625a; /* secondary text (AA on white/ivory) */
+  --color-charcoal: #24201d; /* primary text, dark bands */
+  --color-charcoal-soft: #2f2a26;
+  --color-espresso: #4a2e1a; /* logo brown, primary buttons */
+  --color-bronze: #8a5a32; /* accents & small text on light (AA) */
+  --color-bronze-light: #c39466; /* accents on dark backgrounds */
+
+  --shadow-card: 0 1px 2px rgba(36, 32, 29, 0.04), 0 12px 32px -18px rgba(36, 32, 29, 0.25);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ivory);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-espresso);
+  color: var(--color-ivory);
+}
+
+/* Scrollbar in the site's own palette */
+html {
+  scrollbar-color: var(--color-taupe) var(--color-ivory);
+}
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-ivory);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-taupe);
+  border: 3px solid var(--color-ivory);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-bronze);
+}
+
+@layer components {
+  /* ---- Type scale ---- */
+  .type-display {
+    font-family: var(--font-serif);
+    font-size: clamp(2.5rem, 5vw, 4.25rem);
+    font-weight: 500;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+  }
+  .type-h2 {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 3.4vw, 3rem);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+  }
+  .type-h3 {
+    font-family: var(--font-serif);
+    font-size: clamp(1.6rem, 2.2vw, 2rem);
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  .type-h4 {
+    font-family: var(--font-serif);
+    font-size: 1.375rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .type-eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .type-lead {
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+
+  /* ---- Layout ---- */
+  .container-page {
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+  @media (min-width: 640px) {
+    .container-page {
+      padding-inline: 2.5rem;
+    }
+  }
+  .section-pad {
+    padding-block: 5.5rem;
+  }
+  @media (min-width: 1024px) {
+    .section-pad {
+      padding-block: 8rem;
+    }
+  }
+
+  /* ---- Buttons: sharp, quiet, confident ---- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-height: 3rem;
+    padding: 0.85rem 1.6rem;
+    border: 1px solid transparent;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease,
+      border-color 0.25s ease;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--color-bronze);
+    outline-offset: 3px;
+  }
+  .btn-primary {
+    background-color: var(--color-espresso);
+    color: var(--color-ivory);
+  }
+  .btn-primary:hover {
+    background-color: var(--color-charcoal);
+  }
+  .btn-light {
+    background-color: var(--color-ivory);
+    color: var(--color-charcoal);
+  }
+  .btn-light:hover {
+    background-color: var(--color-sand);
+  }
+  .btn-outline {
+    border-color: var(--color-charcoal);
+    color: var(--color-charcoal);
+  }
+  .btn-outline:hover {
+    background-color: var(--color-charcoal);
+    color: var(--color-ivory);
+  }
+  .btn-outline-light {
+    border-color: rgba(248, 245, 240, 0.55);
+    color: var(--color-ivory);
+  }
+  .btn-outline-light:hover {
+    background-color: var(--color-ivory);
+    border-color: var(--color-ivory);
+    color: var(--color-charcoal);
+  }
+
+  /* ---- Form fields ---- */
+  .field-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-charcoal);
+  }
+  .field {
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.75rem 0.95rem;
+    border: 1px solid var(--color-stone);
+    background-color: var(--color-white);
+    color: var(--color-charcoal);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .field::placeholder {
+    color: #958a80;
+  }
+  .field:hover {
+    border-color: var(--color-taupe);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-bronze);
+    box-shadow: 0 0 0 3px rgba(138, 90, 50, 0.15);
+  }
+  .field[aria-invalid="true"] {
+    border-color: #a33a2c;
+  }
+
+  /* ---- Subtle scroll reveal (see Reveal.tsx) ---- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
