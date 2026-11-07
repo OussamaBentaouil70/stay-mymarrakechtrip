@@ -27,11 +27,13 @@ export const contact = {
   whatsappNumber: "212771444668",
   whatsappMessage: "Hello STAY, I would like to discuss commercial management for my property.",
   /**
-   * Form delivery endpoint. Set to "/api/send-inquiry.php" to use the PHPMailer backend.
+   * Form delivery endpoint.
+   *  - Cloudflare Pages: "/api/send-inquiry" (functions/api/send-inquiry.ts → SMTP/Nodemailer)
+   *  - PHP hosting: "/api/send-inquiry.php" (public/api/send-inquiry.php → PHPMailer)
    * Leave empty to fall back to the visitor's email app (mailto:).
    */
-  formEndpoint: "/api/send-inquiry.php",
-  /** Not used with PHPMailer backend — kept for compatibility with Web3Forms/Formspree. */
+  formEndpoint: "/api/send-inquiry",
+  /** Not used by the Pages Function / PHPMailer backends — kept for Web3Forms/Formspree. */
   formAccessKey: "",
 };
 

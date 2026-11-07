@@ -1,0 +1,18 @@
+# Local values for `wrangler pages dev` (Cloudflare Pages Functions).
+# Copy to `.dev.vars` and fill in your real values. Never commit `.dev.vars`.
+
+# SMTP mailbox
+MAIL_HOST=smtp.hostinger.com
+MAIL_PORT=465
+MAIL_ENCRYPTION=ssl
+MAIL_USERNAME=no-reply@yourdomain.com
+MAIL_PASSWORD=your-smtp-password
+MAIL_FROM_ADDRESS=no-reply@yourdomain.com
+MAIL_FROM_NAME="STAY by My Marrakech Trip"
+
+# Where enquiries are delivered (comma-separate for multiple inboxes)
+ADMIN_EMAIL=you@yourdomain.com
+ADMIN_NAME="STAY by My Marrakech Trip"
+
+SITE_URL=https://stay.mymarrakechtrip.com
+WHATSAPP_NUMBER=212771444668

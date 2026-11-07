@@ -18,15 +18,15 @@ function validate(values: Enquiry): Errors {
   return errors;
 }
 
-/** Sends the enquiry to the PHPMailer backend, or falls back to the visitor's email app. */
-async function deliver(values: Enquiry, source: string): Promise<"sent" | "mailto"> {
+/** Sends the enquiry to the Pages Function endpoint, or falls back to the visitor's email app. */
+async function deliver(values: Enquiry, source: string, honeypot = ""): Promise<"sent" | "mailto"> {
   const fields = {
     name: values.name.trim(),
     property: values.property.trim(),
     email: values.email.trim(),
     phone: values.phone.trim(),
     message: values.message.trim(),
-    botcheck: "", // honeypot
+    botcheck: honeypot, // server-side honeypot (defence in depth)
   };
 
   if (contact.formEndpoint) {
@@ -102,7 +102,7 @@ export function EnquiryForm({ variant }: { variant: "hero" | "contact" }) {
     setStatus("sending");
     const source = hero ? "Hero form" : "Contact form";
     try {
-      const result = await deliver(values, source);
+      const result = await deliver(values, source, honeypot);
       const reference = `STAY-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
       const moved = navigate("/thank-you", {
         name: values.name.trim(),

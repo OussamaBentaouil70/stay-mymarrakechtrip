@@ -45,12 +45,25 @@ Initial market is Marrakech; copy and structure should allow expansion across Mo
 | Motion | **No animation library.** `Reveal.tsx` = IntersectionObserver + CSS (`.reveal`), respects reduced motion |
 | Icons | `lucide-react`; WhatsApp glyph in `WhatsAppIcon.tsx` (lucide has no brand icons) |
 | Fonts | Google Fonts: **Cormorant Garamond** (headings), **Manrope** (body/UI), **Cinzel** (logo wordmark only) |
+| Email | **Nodemailer** over SMTP inside a Cloudflare Pages Function (`functions/api/send-inquiry.ts`); requires `nodejs_compat` |
 
 ```bash
 npm run dev
-npm run build      # -> dist/index.html (~289 kB, ~88 kB gzip)
+npm run build      # -> dist/index.html (~300 kB, ~91 kB gzip)
 npx tsc --noEmit
 ```
+
+Cloudflare Pages (config in `wrangler.toml`; Functions live in `functions/`):
+
+```bash
+npx wrangler pages dev      # local preview incl. /api/send-inquiry (port 8788, reads .dev.vars)
+npx wrangler pages deploy   # deploy dist/ + functions/ to https://stay-mymarrakechtrip.pages.dev
+```
+
+Pages serves the SPA root for unknown paths automatically (no `_redirects` needed, as long
+as there is no top-level `404.html`). Secrets for the Function are Pages env vars in
+production and `.dev.vars` locally.
+
 Rules: don't hand-edit `package.json` / `vite.config.ts`. Entry `src/App.tsx`.
 
 CSS gotchas: keep custom classes inside `@layer components` (unlayered CSS overrides
@@ -81,6 +94,11 @@ src/
     Reveal.tsx             Scroll reveal
     SectionHeading.tsx     Eyebrow + h2 + intro
     WhatsAppIcon.tsx
+functions/
+  api/send-inquiry.ts      ★ Cloudflare Pages Function — POST /api/send-inquiry → SMTP via Nodemailer (admin + client emails)
+server/
+  php/api/                 Optional PHP + PHPMailer backend for non-Pages hosts (NOT part of the Pages deploy)
+wrangler.toml              Cloudflare Pages project config (project name, dist output)
 ```
 
 Section anchors: `#top`, `#about`, `#services` (+ `#revenue-management`, `#ota-management`,
@@ -95,15 +113,26 @@ first invalid field; errors linked via `aria-describedby`. Hidden honeypot (`bot
 
 Two instances: hero (compact, button "Let's work together") and contact (button "Send enquiry"). Ids are prefixed `hero-enquiry-*` / `contact-enquiry-*`. Each submission includes `source` ("Hero form" / "Contact form").
 
-Delivery (`deliver()` in `EnquiryForm.tsx`):
-1. If `formEndpoint` is set → JSON POST (works with **Web3Forms**: endpoint
-   `https://api.web3forms.com/submit` + `formAccessKey`; or **Formspree**:
-   `https://formspree.io/f/<id>`, no key). Success → thank-you state; failure → error
-   message, inputs kept.
-2. If empty (current default) → opens a pre-filled `mailto:` to `contact.email`.
+Delivery (`deliver()` in `EnquiryForm.tsx`), primary path:
+1. **Cloudflare Pages** — `formEndpoint: "/api/send-inquiry"` posts JSON to
+   `functions/api/send-inquiry.ts`, which validates server-side (including the honeypot)
+   and sends **two emails over SMTP with Nodemailer**: admin notification (reply-to =
+   visitor) first, then the client thank-you. Admin failure → `500`; client failure is
+   logged and still returns `200`. Success → thank-you page; failure → inline error,
+   inputs kept. Nodemailer needs `nodejs_compat` (set in `wrangler.toml`) for `node:net` /
+   `node:tls`. Requirements: `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`,
+   `MAIL_FROM_ADDRESS`, `ADMIN_EMAIL` (plus optional `MAIL_PORT`, `MAIL_ENCRYPTION`,
+   `MAIL_FROM_NAME`, `ADMIN_NAME`, `SITE_URL`, `WHATSAPP_NUMBER`) as Pages env vars, or in
+   `.dev.vars` for `wrangler pages dev`. Port 465 + `ssl`, or 587 + `tls`.
 
-⚠️ Current placeholders to replace: `contact.email` (`contact@mymarrakechtrip.com` is a
-placeholder), `formEndpoint` / `formAccessKey` (empty → mailto fallback).
+Fallbacks:
+2. **PHP host** — `server/php/api/send-inquiry.php` (PHPMailer) is available for non-Pages
+   hosting: upload `server/php/api/` to the web root, set `formEndpoint` to
+   `/api/send-inquiry.php` and configure `.env` (SMTP).
+3. **No endpoint** — opens a pre-filled `mailto:` to `contact.email`.
+
+⚠️ Placeholders to replace: `contact.email` (`contact@mymarrakechtrip.com`), the SMTP
+credentials / sender address, and `ADMIN_EMAIL`.
 
 ---
 
