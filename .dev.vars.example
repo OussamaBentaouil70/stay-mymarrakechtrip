@@ -1,18 +1,26 @@
 # Local values for `wrangler pages dev` (Cloudflare Pages Functions).
 # Copy to `.dev.vars` and fill in your real values. Never commit `.dev.vars`.
 
-# SMTP mailbox
-MAIL_HOST=smtp.hostinger.com
-MAIL_PORT=465
-MAIL_ENCRYPTION=ssl
-MAIL_USERNAME=no-reply@yourdomain.com
-MAIL_PASSWORD=your-smtp-password
-MAIL_FROM_ADDRESS=no-reply@yourdomain.com
+# --- Production / recommended: Brevo HTTPS API ---------------------------
+# Cloudflare's servers can't reach SMTP servers, so production must use this.
+BREVO_API_KEY=xkeysib-your-key
+
+# Sender shown to clients (verified sender in Brevo, routed to Gmail by Cloudflare Email Routing)
+MAIL_FROM_ADDRESS=stay@mymarrakechtrip.com
 MAIL_FROM_NAME="STAY by My Marrakech Trip"
 
 # Where enquiries are delivered (comma-separate for multiple inboxes)
-ADMIN_EMAIL=you@yourdomain.com
+ADMIN_EMAIL=mymarrakechtrip36@gmail.com
 ADMIN_NAME="STAY by My Marrakech Trip"
 
 SITE_URL=https://stay.mymarrakechtrip.com
 WHATSAPP_NUMBER=212771444668
+# Optional, defaults to ${SITE_URL}/email/stay-logo.png
+# LOGO_URL=https://stay.mymarrakechtrip.com/email/stay-logo.png
+
+# --- Optional: SMTP via Nodemailer (local testing only, used when BREVO_API_KEY is empty) ---
+# MAIL_HOST=smtp-relay.brevo.com
+# MAIL_PORT=587
+# MAIL_ENCRYPTION=tls
+# MAIL_USERNAME=your-brevo-smtp-login
+# MAIL_PASSWORD=your-brevo-smtp-key

@@ -1,18 +1,21 @@
 /**
  * Cloudflare Pages Function — POST /api/send-inquiry
  *
- * Sends two emails through an SMTP mailbox using Nodemailer:
+ * Sends two emails:
  *   1. Admin notification (reply-to set to the visitor)
- *   2. Client thank-you
+ *   2. Client thank-you (reply-to set to the public address, e.g. stay@mymarrakechtrip.com)
  *
- * Requires the `nodejs_compat` compatibility flag (see wrangler.toml), which
- * gives Workers `node:net` / `node:tls` so Nodemailer can open the SMTP
- * connection.
+ * Transport:
+ *   - BREVO_API_KEY set -> Brevo HTTPS API. Required in production: Cloudflare's servers
+ *     can't reach SMTP servers ("proxy request failed, cannot connect to the specified address").
+ *   - otherwise        -> Nodemailer over SMTP (works locally with `wrangler pages dev`).
+ *     Needs the `nodejs_compat` compatibility flag (see wrangler.toml).
  *
- * Required environment variables (Pages → Settings → Environment variables):
- *   MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS, ADMIN_EMAIL
+ * Environment variables (Pages → Settings → Variables and Secrets):
+ *   Production: BREVO_API_KEY (secret), MAIL_FROM_ADDRESS, ADMIN_EMAIL
+ *   SMTP mode:  MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS, ADMIN_EMAIL
  * Optional:
- *   MAIL_PORT, MAIL_ENCRYPTION, MAIL_FROM_NAME, ADMIN_NAME, SITE_URL, WHATSAPP_NUMBER
+ *   MAIL_PORT, MAIL_ENCRYPTION, MAIL_FROM_NAME, ADMIN_NAME, SITE_URL, WHATSAPP_NUMBER, LOGO_URL
  *
  * Local development: put the same values in `.dev.vars` (gitignored).
  */
@@ -20,6 +23,8 @@
 import nodemailer from "nodemailer";
 
 interface Env {
+  BREVO_API_KEY?: string;
+  LOGO_URL?: string;
   MAIL_HOST?: string;
   MAIL_PORT?: string;
   MAIL_ENCRYPTION?: string;
@@ -60,10 +65,11 @@ interface TemplateData extends Enquiry {
   year: number;
   brandName: string;
   adminEmail: string;
+  logoUrl: string;
 }
 
 interface MailOptions {
-  from: string;
+  from: { name: string; address: string };
   to: string[];
   replyTo: string;
   subject: string;
@@ -163,9 +169,9 @@ function adminHtml(data: TemplateData): string {
       <td align="center" style="padding:28px 12px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #dddddd;border-radius:6px;overflow:hidden;">
           <tr>
-            <td style="background-color:${INK};padding:26px 32px;">
-              <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;letter-spacing:0.14em;color:${IVORY};text-transform:uppercase;">${esc(data.brandName)}</div>
-              <div style="margin-top:6px;font-size:10px;letter-spacing:0.24em;color:${BRONZE};text-transform:uppercase;">New enquiry</div>
+            <td align="center" style="background-color:${INK};padding:22px 32px 18px;text-align:center;">
+              <img src="${esc(data.logoUrl)}" width="200" alt="${esc(data.brandName)}" style="display:block;margin:0 auto;width:200px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;color:${IVORY};font-family:Georgia,'Times New Roman',serif;font-size:18px;letter-spacing:0.14em;" />
+              <div style="margin-top:12px;font-size:10px;letter-spacing:0.24em;color:${BRONZE};text-transform:uppercase;">New enquiry</div>
             </td>
           </tr>
           <tr>
@@ -235,8 +241,8 @@ function clientHtml(data: TemplateData): string {
       <td align="center" style="padding:28px 12px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid #dddddd;border-radius:6px;overflow:hidden;">
           <tr>
-            <td style="background-color:${INK};padding:28px 32px;text-align:center;">
-              <div style="font-family:Georgia,'Times New Roman',serif;font-size:21px;letter-spacing:0.14em;color:${IVORY};text-transform:uppercase;">${esc(data.brandName)}</div>
+            <td align="center" style="background-color:${INK};padding:24px 32px;text-align:center;">
+              <img src="${esc(data.logoUrl)}" width="220" alt="${esc(data.brandName)}" style="display:block;margin:0 auto;width:220px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;color:${IVORY};font-family:Georgia,'Times New Roman',serif;font-size:20px;letter-spacing:0.14em;" />
             </td>
           </tr>
           <tr>
@@ -341,7 +347,38 @@ function createTransport(env: Env) {
   });
 }
 
+/** https://developers.brevo.com/reference/sendtransacemail */
+async function sendWithBrevo(apiKey: string, message: MailOptions): Promise<void> {
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: message.from.name, email: message.from.address },
+      to: message.to.map((email) => ({ email })),
+      replyTo: { email: message.replyTo },
+      subject: message.subject,
+      htmlContent: message.html,
+      textContent: message.text,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { code?: string; message?: string };
+    throw new Error(`Brevo ${res.status}${body.code ? ` ${body.code}` : ""}: ${body.message || res.statusText}`);
+  }
+}
+
 async function sendEmail(env: Env, message: MailOptions): Promise<void> {
+  const brevoKey = (env.BREVO_API_KEY || "").trim();
+  if (brevoKey) {
+    await sendWithBrevo(brevoKey, message);
+    return;
+  }
+
   const transport = createTransport(env);
   try {
     await transport.sendMail(message);
@@ -399,14 +436,11 @@ export async function onRequest(context: {
   const adminEmail = (env.ADMIN_EMAIL || "").trim();
   const adminName = (env.ADMIN_NAME || fromName).trim();
 
-  if (
-    !env.MAIL_HOST ||
-    !env.MAIL_USERNAME ||
-    !env.MAIL_PASSWORD ||
-    !fromAddress ||
-    !adminEmail
-  ) {
-    console.error("[inquiry] Missing MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS or ADMIN_EMAIL.");
+  const usesBrevo = Boolean((env.BREVO_API_KEY || "").trim());
+  const smtpReady = Boolean(env.MAIL_HOST && env.MAIL_USERNAME && env.MAIL_PASSWORD);
+
+  if ((!usesBrevo && !smtpReady) || !fromAddress || !adminEmail) {
+    console.error("[inquiry] Missing BREVO_API_KEY (or MAIL_HOST/MAIL_USERNAME/MAIL_PASSWORD), MAIL_FROM_ADDRESS or ADMIN_EMAIL.");
     return json(503, {
       ok: false,
       message: "The form is not available right now. Please contact us directly.",
@@ -436,9 +470,10 @@ export async function onRequest(context: {
     year: new Date().getUTCFullYear(),
     brandName: fromName,
     adminEmail,
+    logoUrl: (env.LOGO_URL || "").trim() || `${siteUrl || "https://stay.mymarrakechtrip.com"}/email/stay-logo.png`,
   };
 
-  const sender = `${fromName} <${fromAddress}>`;
+  const sender = { name: fromName, address: fromAddress };
   const subjectName = oneLine(values.name);
   const subjectProperty = oneLine(values.property);
 
@@ -467,7 +502,9 @@ export async function onRequest(context: {
     await sendEmail(env, {
       from: sender,
       to: [values.email],
-      replyTo: adminEmail.split(",")[0]?.trim() || adminEmail,
+      // Replies go to the public address (stay@…), which Email Routing forwards to Gmail,
+      // so the private admin inbox is never exposed to visitors.
+      replyTo: fromAddress,
       subject: "Thank you for your enquiry — STAY by My Marrakech Trip",
       html: clientHtml(data),
       text: clientText(data),
